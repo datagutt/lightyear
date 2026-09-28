@@ -678,7 +678,7 @@ fn update_action_state<S: ActionStateSequence>(
     //  presumably the entity is replicated to many clients, but only one client is controlling the entity?
     timeline: Res<LocalTimeline>,
     tick_duration: Res<TickDuration>,
-    server: Single<(Entity, Has<HostServer>), With<Started>>,
+    servers: Query<(Entity, Has<HostServer>), With<Started>>,
     #[cfg(feature = "metrics")] metric_handles: Res<InputMetricHandles<S>>,
     mut action_state_query: Query<(
         Entity,
@@ -686,7 +686,10 @@ fn update_action_state<S: ActionStateSequence>(
         &mut InputBuffer<S::Snapshot, S::Action>,
     )>,
 ) {
-    let (server, host_client) = server.into_inner();
+    let Some((server, _)) = servers.iter().next() else {
+        return;
+    };
+    let host_client = servers.iter().any(|(_, host)| host);
     let tick = timeline.tick();
     for (entity, action_state, mut input_buffer) in action_state_query.iter_mut() {
         trace!(?tick, ?server, ?input_buffer, "input buffer on server");
