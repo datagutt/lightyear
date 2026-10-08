@@ -90,7 +90,10 @@ impl RegistryHasher {
                 DebugName::type_name::<T>()
             )
         }
-        DebugName::type_name::<T>().hash(&mut self.hasher);
+        // The type's full name, not its DebugName: without bevy_utils' debug feature a DebugName
+        // is one placeholder for every type, and the protocol check would then compare a build
+        // with debug names against one without and never match.
+        core::any::type_name::<T>().hash(&mut self.hasher);
     }
 
     pub fn finish(&mut self) -> RegistryHash {
