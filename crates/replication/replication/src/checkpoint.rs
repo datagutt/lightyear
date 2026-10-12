@@ -199,10 +199,20 @@ impl ReplicationCheckpointMap {
     /// checkpoints map to the same Lightyear tick, the newer Replicon checkpoint wins. Returns the
     /// resolved checkpoint, even when an already-cached checkpoint remains newer, or `None` if the
     /// mapping has not been received yet.
+    ///
+    /// The client asks again every frame until a newer mutate tick completes. A link that is
+    /// starved of bandwidth can go more than `MAX_STORED_CHECKPOINTS` checkpoints without
+    /// completing one, which prunes the mapping of the cached checkpoint, so the cache answers
+    /// for its own tick.
     pub fn record_last_confirmed_checkpoint(
         &mut self,
         replicon_tick: RepliconTick,
     ) -> Option<CompletedCheckpoint> {
+        if let Some(cached) = self.last_confirmed_checkpoint
+            && cached.replicon_tick == replicon_tick
+        {
+            return Some(cached);
+        }
         let checkpoint = CompletedCheckpoint {
             replicon_tick,
             tick: self.get(replicon_tick)?,
